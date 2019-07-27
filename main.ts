@@ -1,7 +1,6 @@
 import { readFileSync } from "fs";
-import Parser, { Tree } from "web-tree-sitter";
+import Parser, { SyntaxNode, Tree } from "web-tree-sitter";
 import * as Path from "path";
-import { TreeUtils } from "./treeUtils";
 
 async function test() {
   console.error("running test");
@@ -19,11 +18,31 @@ async function test() {
     let tree: Tree | undefined;
     tree = parser.parse(fileContent);
 
-    TreeUtils.getModuleNameAndExposing(tree);
+    const moduleDeclaration:
+      | SyntaxNode
+      | undefined = tree.rootNode.children.find(
+      child => child.type === "module_declaration"
+    );
+    if (moduleDeclaration) {
+      const exposingList = moduleDeclaration.children.find(
+        child => child.type === "exposing_list"
+      );
+      if (exposingList) {
+        const exposedValues = exposingList.descendantsOfType("exposed_value");
+
+        for (const value of exposedValues) {
+          console.log(value.text);
+          try {
+            tree.rootNode.descendantsOfType("value_declaration");
+          } catch (error) {
+            console.log(error.stack);
+          }
+        }
+      }
+    }
 
     return Promise.resolve();
   } catch (error) {
-    console.error(error.message);
     console.error(error.stack);
     return Promise.reject(error);
   }
