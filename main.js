@@ -12,30 +12,28 @@ async function test() {
     const parser = new Parser();
     parser.setLanguage(language);
 
-    const filePath = Path.join(__dirname, "Array.elm");
+    const filePath = Path.join(__dirname, "File.elm");
     console.log(filePath);
     const fileContent = readFileSync(filePath, "utf8");
     let tree = parser.parse(fileContent);
 
-    const moduleDeclaration = tree.rootNode.children.find(
-      child => child.type === "module_declaration"
-    );
-    if (moduleDeclaration) {
-      const exposingList = moduleDeclaration.children.find(
-        child => child.type === "exposing_list"
-      );
-      if (exposingList) {
-        const exposedValues = exposingList.descendantsOfType("exposed_value");
+    // Simulate a file change
+    const filePath2 = Path.join(__dirname, "File2.elm");
+    const fileContent2 = readFileSync(filePath2, "utf8");
+    tree = parser.parse(fileContent2, tree);
 
-        for (const value of exposedValues) {
-          console.log(value.text);
-          try {
-            tree.rootNode.descendantsOfType("value_declaration");
-          } catch (error) {
-            console.log(error.stack);
-          }
+    const functions = tree.rootNode.descendantsOfType("value_declaration");
+    if (functions) {
+      return functions.find(elmFunction => {
+        const declaration = elmFunction.children.find(
+          child => child.type === "function_declaration_left"
+        );
+        if (declaration && declaration.firstNamedChild) {
+          // It doesn't matter what string we compare with
+          return "functionName" === declaration.firstNamedChild.text;
         }
-      }
+        return false;
+      });
     }
 
     return Promise.resolve();
